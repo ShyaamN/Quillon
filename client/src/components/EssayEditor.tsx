@@ -15,6 +15,7 @@ interface Essay {
   collegeTarget: string;
   essayType: string;
   wordCount: number;
+  maxWords: number;
   content: string;
 }
 
@@ -30,6 +31,7 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
     collegeTarget: 'Common App',
     essayType: 'Personal Statement',
     wordCount: 0,
+    maxWords: 650,
     content: ''
   });
   
@@ -167,6 +169,33 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
                 <SelectItem value="Overcome Challenge">Overcome Challenge</SelectItem>
               </SelectContent>
             </Select>
+            
+            <div className="flex items-center gap-2">
+              <label htmlFor="wordLimit" className="text-sm text-muted-foreground">Word Limit:</label>
+              <Input
+                id="wordLimit"
+                type="number"
+                value={currentEssay.maxWords}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value) && value >= 1) {
+                    setCurrentEssay(prev => ({ ...prev, maxWords: Math.min(2000, Math.max(1, value)) }));
+                  }
+                }}
+                onBlur={(e) => {
+                  // Ensure valid value on blur, fallback to previous value or 650
+                  const value = parseInt(e.target.value);
+                  if (isNaN(value) || value < 1) {
+                    setCurrentEssay(prev => ({ ...prev, maxWords: prev.maxWords || 650 }));
+                  }
+                }}
+                className="w-20 text-center"
+                min="1"
+                max="2000"
+                step="50"
+                data-testid="input-word-limit"
+              />
+            </div>
           </div>
           
           <Button onClick={handleSave} data-testid="button-save-essay">
@@ -184,7 +213,7 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
             content={currentEssay.content}
             onChange={handleContentChange}
             placeholder="Start writing your essay here..."
-            maxWords={650}
+            maxWords={currentEssay.maxWords}
           />
         </div>
 

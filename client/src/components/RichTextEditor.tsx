@@ -10,7 +10,7 @@ interface RichTextEditorProps {
   maxWords?: number;
 }
 
-export default function RichTextEditor({ content, onChange, placeholder = "Start wr<em>i</em>ting your essay...", maxWords = 650 }: RichTextEditorProps) {
+export default function RichTextEditor({ content, onChange, placeholder = "Start wr<em>i</em>ting your essay...", maxWords }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [wordCount, setWordCount] = useState(0);
 
@@ -93,9 +93,15 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
         
         {/* Word Count */}
         <div className="ml-auto flex items-center gap-2 text-sm">
-          <span className={`${wordCount > maxWords ? 'text-destructive' : 'text-muted-foreground'}`}>
-            {wordCount}/{maxWords} words
-          </span>
+          {maxWords ? (
+            <span className={`${wordCount > maxWords ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {wordCount}/{maxWords} words
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              {wordCount} words
+            </span>
+          )}
         </div>
       </div>
 
