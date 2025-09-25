@@ -3,6 +3,7 @@ import { ArrowLeft, Save, FileText, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { apiRequest } from '@/lib/queryClient';
 import RichTextEditor from './RichTextEditor';
 import AIChat from './AIChat';
 import EssayFeedback from './EssayFeedback';
@@ -34,6 +35,8 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
   
   const [showFeedback, setShowFeedback] = useState(false);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
+  const [feedbackData, setFeedbackData] = useState<any>(null);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<{
     original: string;
     suggested: string;
@@ -55,12 +58,29 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
     }));
   };
 
-  const handleGenerateFeedback = () => {
+  const handleGenerateFeedback = async () => {
+    if (!currentEssay.id) {
+      // If essay doesn't have an ID, save it first
+      const newEssay = { ...currentEssay, id: Date.now().toString(), lastModified: new Date() };
+      onSave(newEssay);
+      setCurrentEssay(newEssay);
+      return;
+    }
+
     setIsFeedbackLoading(true);
-    setTimeout(() => {
-      setIsFeedbackLoading(false);
+    setFeedbackError(null);
+    
+    try {
+      const response = await apiRequest('POST', `/api/essays/${currentEssay.id}/feedback`);
+      const feedback = await response.json();
+      setFeedbackData(feedback);
       setShowFeedback(true);
-    }, 2000);
+    } catch (error) {
+      console.error('Error getting feedback:', error);
+      setFeedbackError(error instanceof Error ? error.message : 'Failed to get feedback');
+    } finally {
+      setIsFeedbackLoading(false);
+    }
   };
 
   const handleAIEdit = (suggestion: string) => {
@@ -192,6 +212,8 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
               isVisible={showFeedback}
               onGenerateFeedback={handleGenerateFeedback}
               isLoading={isFeedbackLoading}
+              feedbackData={feedbackData}
+              error={feedbackError}
             />
           </div>
         </div>
