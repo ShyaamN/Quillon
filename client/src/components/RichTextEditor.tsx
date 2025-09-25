@@ -15,10 +15,14 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
   const [wordCount, setWordCount] = useState(0);
 
   const execCommand = (command: string, value?: string) => {
-    document.execCommand(command, false, value);
+    // Ensure editor has focus before executing command
     if (editorRef.current) {
+      editorRef.current.focus();
+      document.execCommand(command, false, value);
       const newContent = editorRef.current.innerHTML;
       onChange(newContent);
+      // Maintain focus after command execution
+      editorRef.current.focus();
     }
   };
 
@@ -29,6 +33,42 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
       const words = textContent.trim() ? textContent.trim().split(/\s+/).length : 0;
       setWordCount(words);
       onChange(newContent);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    // Prevent default paste behavior to avoid formatting issues
+    e.preventDefault();
+    
+    if (editorRef.current) {
+      // Get plain text from clipboard
+      const text = e.clipboardData.getData('text/plain');
+      
+      // Insert text at current cursor position
+      if (document.getSelection) {
+        const selection = document.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(document.createTextNode(text));
+          
+          // Move cursor to end of inserted text
+          range.setStartAfter(range.endContainer);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+      
+      // Trigger input handling to update content and word count
+      handleInput();
+      
+      // Ensure editor maintains focus after paste
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.focus();
+        }
+      }, 0);
     }
   };
 
@@ -110,6 +150,7 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
         ref={editorRef}
         contentEditable
         onInput={handleInput}
+        onPaste={handlePaste}
         className="min-h-[400px] p-4 focus:outline-none text-foreground leading-relaxed"
         data-placeholder={placeholder}
         data-testid="editor-content"
