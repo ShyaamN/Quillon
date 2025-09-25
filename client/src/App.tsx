@@ -5,91 +5,59 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { Header } from "@/components/Header";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthModal } from "@/components/AuthModal";
+import { LandingPage } from "@/components/LandingPage";
 import Dashboard from "@/components/Dashboard";
 import EssayList from "@/components/EssayList";
 import EssayEditor from "@/components/EssayEditor";
 import ExtracurricularList from "@/components/ExtracurricularList";
 import NotFound from "@/pages/not-found";
-
-// Mock data - todo: replace with real data
-const mockEssays = [
-  {
-    id: '1',
-    title: 'Overcoming Cultural Barriers Through Language',
-    collegeTarget: 'Common App',
-    essayType: 'Personal Statement',
-    wordCount: 487,
-    lastModified: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    content: '<p>Growing up in a bilingual household taught me that language is more than just words—it\'s a bridge between worlds. When my family immigrated from Vietnam, I became the translator for my parents, navigating not just words but entire cultural contexts...</p>'
-  },
-  {
-    id: '2',
-    title: 'Why Computer Science at Stanford',
-    collegeTarget: 'Stanford University',
-    essayType: 'Why Major',
-    wordCount: 312,
-    lastModified: new Date(Date.now() - 1000 * 60 * 60 * 12),
-    content: '<p>My fascination with artificial intelligence began when I built my first chatbot during freshman year. What started as a simple project evolved into a deep appreciation for the intersection of technology and human behavior...</p>'
-  },
-  {
-    id: '3',
-    title: 'Leadership in Community Service',
-    collegeTarget: 'UC Berkeley',
-    essayType: 'Leadership',
-    wordCount: 256,
-    lastModified: new Date(Date.now() - 1000 * 60 * 60 * 6),
-    content: '<p>When our local food bank faced volunteer shortages during the pandemic, I knew I had to act. Rather than simply volunteering myself, I organized a student volunteer network that ultimately served over 500 families...</p>'
-  }
-];
-
-const mockActivities = [
-  {
-    id: '1',
-    activityName: 'Debate Team Captain',
-    description: 'Led a team of 12 students in competitive debate tournaments, organizing practice sessions and developing argument strategies.',
-    role: 'Captain',
-    duration: '2022-2024',
-    impact: 'Improved team ranking from regional to state level, won 3 major tournaments, and mentored junior members in public speaking skills.'
-  },
-  {
-    id: '2',
-    activityName: 'Volunteer Math Tutor',
-    description: 'Provided free tutoring services to underprivileged students in algebra and geometry through local community center.',
-    role: 'Tutor',
-    duration: '2021-2024',
-    impact: 'Helped 25+ students improve their grades by an average of one letter grade, with 90% passing their final exams.'
-  },
-  {
-    id: '3',
-    activityName: 'Environmental Club President',
-    description: 'Founded and led school environmental awareness club, organizing campus sustainability initiatives and community outreach programs.',
-    role: 'President & Founder',
-    duration: '2020-2024',
-    impact: 'Reduced school waste by 30% through recycling program, planted 200+ trees, and engaged 150+ students in environmental activities.'
-  },
-  {
-    id: '4',
-    activityName: 'Hospital Volunteer',
-    description: 'Assisted medical staff and provided comfort to patients and families in the pediatric ward.',
-    role: 'Volunteer',
-    duration: '2021-2023',
-    impact: 'Completed 200+ volunteer hours, supported 50+ families during difficult times, and gained valuable healthcare experience.'
-  },
-  {
-    id: '5',
-    activityName: 'Student Government Treasurer',
-    description: 'Managed student body budget and organized fundraising events for school programs and activities.',
-    role: 'Treasurer',
-    duration: '2023-2024',
-    impact: 'Successfully managed $15,000 annual budget, increased fundraising by 40%, and funded 8 new student programs.'
-  }
-];
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 function Router() {
+  const { user, isLoading, isAuthenticated } = useAuth();
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show landing page if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <LandingPage />
+      </div>
+    );
+  }
+
+  // Show main app if authenticated
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <AuthenticatedApp user={user} />
+    </div>
+  );
+}
+
+function AuthenticatedApp({ user }: { user: any }) {
   const [currentView, setCurrentView] = useState<'dashboard' | 'essays' | 'essay-editor' | 'extracurriculars'>('dashboard');
   const [selectedEssay, setSelectedEssay] = useState<any>(null);
-  const [essays, setEssays] = useState(mockEssays);
-  const [activities, setActivities] = useState(mockActivities);
+  const [essays, setEssays] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
 
   const handleNavigateToEssays = () => setCurrentView('essays');
   const handleNavigateToExtracurriculars = () => setCurrentView('extracurriculars');

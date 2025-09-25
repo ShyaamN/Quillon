@@ -83,10 +83,13 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
-        mono: ["var(--font-mono)"],
-        heading: ["var(--font-heading)"],
+        inter: ["Inter", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
+        domine: ["Domine", "serif"],
+        special: ["Special Gothic Expanded One", "serif"],
+        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        serif: ["Domine", "ui-serif", "Georgia", "Cambria", "Times New Roman", "Times", "serif"],
+        heading: ["Special Gothic Expanded One", "serif"],
       },
       keyframes: {
         "accordion-down": {

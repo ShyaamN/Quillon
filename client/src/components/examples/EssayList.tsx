@@ -38,6 +38,7 @@ export default function EssayListExample() {
         essays={mockEssays}
         onSelectEssay={(essay) => console.log('Selected essay:', essay.title)}
         onNewEssay={() => console.log('Creating new essay')}
+        onDeleteEssay={(id) => console.log('Deleting essay with id:', id)}
       />
     </div>
   );

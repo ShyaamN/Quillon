@@ -10,6 +10,7 @@ export default function EssayEditorExample() {
     collegeTarget: 'Common App',
     essayType: 'Personal Statement',
     wordCount: 287,
+    maxWords: 650,
     content: '<p>Growing up in a bilingual household taught me that language is more than just words—it\'s a bridge between worlds...</p>'
   };
 
