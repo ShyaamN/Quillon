@@ -83,10 +83,10 @@ export class MemStorage implements IStorage {
     
     const updated: Essay = { 
       ...existing,
-      ...(updateData.title && { title: updateData.title }),
+      ...(updateData.title !== undefined && { title: updateData.title }),
       ...(updateData.content !== undefined && { content: updateData.content }),
       ...(updateData.collegeTarget !== undefined && { collegeTarget: updateData.collegeTarget }),
-      ...(updateData.essayType && { essayType: updateData.essayType }),
+      ...(updateData.essayType !== undefined && { essayType: updateData.essayType }),
       ...(updateData.wordCount !== undefined && { wordCount: updateData.wordCount }),
       lastModified: new Date() 
     };
@@ -128,11 +128,11 @@ export class MemStorage implements IStorage {
     
     const updated: ExtracurricularActivity = { 
       ...existing,
-      ...(updateData.activityName && { activityName: updateData.activityName }),
-      ...(updateData.description && { description: updateData.description }),
-      ...(updateData.role && { role: updateData.role }),
-      ...(updateData.duration && { duration: updateData.duration }),
-      ...(updateData.impact && { impact: updateData.impact }),
+      ...(updateData.activityName !== undefined && { activityName: updateData.activityName }),
+      ...(updateData.description !== undefined && { description: updateData.description }),
+      ...(updateData.role !== undefined && { role: updateData.role }),
+      ...(updateData.duration !== undefined && { duration: updateData.duration }),
+      ...(updateData.impact !== undefined && { impact: updateData.impact }),
       lastModified: new Date() 
     };
     this.extracurriculars.set(id, updated);
