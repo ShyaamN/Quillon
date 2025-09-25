@@ -1,7 +1,24 @@
-import { Plus, FileText, Clock, BookOpen } from 'lucide-react';
+import { Plus, FileText, Clock, BookOpen, Trash2, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Essay {
   id: string;
@@ -17,9 +34,10 @@ interface EssayListProps {
   essays: Essay[];
   onSelectEssay: (essay: Essay) => void;
   onNewEssay: () => void;
+  onDeleteEssay: (id: string) => void;
 }
 
-export default function EssayList({ essays, onSelectEssay, onNewEssay }: EssayListProps) {
+export default function EssayList({ essays, onSelectEssay, onNewEssay, onDeleteEssay }: EssayListProps) {
   const formatDate = (date: Date) => {
     return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
       Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
@@ -61,7 +79,7 @@ export default function EssayList({ essays, onSelectEssay, onNewEssay }: EssayLi
           {essays.map((essay) => (
             <Card 
               key={essay.id} 
-              className="hover-elevate cursor-pointer"
+              className="hover-elevate cursor-pointer relative"
               onClick={() => onSelectEssay(essay)}
               data-testid={`card-essay-${essay.id}`}
             >
@@ -70,7 +88,48 @@ export default function EssayList({ essays, onSelectEssay, onNewEssay }: EssayLi
                   <CardTitle className="text-base leading-tight line-clamp-2">
                     {essay.title}
                   </CardTitle>
-                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                  <div className="flex items-center gap-1">
+                    <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                    <AlertDialog>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="w-3 h-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogTrigger className="flex items-center w-full">
+                              <Trash2 className="w-4 h-4 mr-2 text-destructive" />
+                              Delete Essay
+                            </AlertDialogTrigger>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Essay</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{essay.title}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDeleteEssay(essay.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-2">

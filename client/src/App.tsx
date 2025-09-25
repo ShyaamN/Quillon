@@ -129,6 +129,10 @@ function Router() {
     console.log('New activity creation triggered from dashboard');
   };
 
+  const handleDeleteEssay = (id: string) => {
+    setEssays(prev => prev.filter(e => e.id !== id));
+  };
+
   return (
     <Switch>
       <Route path="/">
@@ -154,6 +158,7 @@ function Router() {
                 essays={essays}
                 onSelectEssay={handleSelectEssay}
                 onNewEssay={handleNewEssay}
+                onDeleteEssay={handleDeleteEssay}
               />
             </div>
           </div>
