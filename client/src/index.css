@@ -244,6 +244,27 @@
  */
 @layer utilities {
 
+  /* Modern gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-foreground)) 100%);
+  }
+
+  .gradient-subtle {
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--card)) 100%);
+  }
+
+  .gradient-hero {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(var(--accent) / 0.1) 100%);
+  }
+
+  .gradient-card {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%);
+  }
+
+  .gradient-border {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  }
+
   /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;

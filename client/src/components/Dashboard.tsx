@@ -11,20 +11,21 @@ interface DashboardProps {
 
 export default function Dashboard({ onNavigateToEssays, onNavigateToExtracurriculars, onNewEssay, onNewActivity }: DashboardProps) {
   return (
-    <div className="p-6 space-y-6">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-heading font-bold text-foreground mb-2">
-          Quillon
-        </h1>
-        <p className="text-muted-foreground">Your AI-powered college application assistant</p>
-      </div>
+    <div className="min-h-screen gradient-subtle">
+      <div className="p-6 space-y-6">
+        <div className="text-center mb-8 p-8 rounded-2xl gradient-hero">
+          <h1 className="text-4xl font-heading font-bold text-foreground mb-2">
+            Quillon
+          </h1>
+          <p className="text-muted-foreground">Your AI-powered college application assistant</p>
+        </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
         {/* Essays Section */}
-        <Card className="hover-elevate cursor-pointer" onClick={onNavigateToEssays} data-testid="card-essays">
+        <Card className="hover-elevate cursor-pointer gradient-card border-0" onClick={onNavigateToEssays} data-testid="card-essays">
           <CardHeader className="text-center pb-4">
-            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-              <BookOpen className="w-6 h-6 text-primary" />
+            <div className="mx-auto w-12 h-12 gradient-primary rounded-lg flex items-center justify-center mb-4">
+              <BookOpen className="w-6 h-6 text-white" />
             </div>
             <CardTitle className="text-xl">Essays</CardTitle>
             <CardDescription>
@@ -51,10 +52,10 @@ export default function Dashboard({ onNavigateToEssays, onNavigateToExtracurricu
         </Card>
 
         {/* Extracurriculars Section */}
-        <Card className="hover-elevate cursor-pointer" onClick={onNavigateToExtracurriculars} data-testid="card-extracurriculars">
+        <Card className="hover-elevate cursor-pointer gradient-card border-0" onClick={onNavigateToExtracurriculars} data-testid="card-extracurriculars">
           <CardHeader className="text-center pb-4">
-            <div className="mx-auto w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
-              <Trophy className="w-6 h-6 text-accent-foreground" />
+            <div className="mx-auto w-12 h-12 gradient-border rounded-lg flex items-center justify-center mb-4">
+              <Trophy className="w-6 h-6 text-white" />
             </div>
             <CardTitle className="text-xl">Extracurriculars</CardTitle>
             <CardDescription>
@@ -92,6 +93,7 @@ export default function Dashboard({ onNavigateToEssays, onNavigateToExtracurricu
           <PlusCircle className="w-4 h-4 mr-2" />
           New Activity
         </Button>
+      </div>
       </div>
     </div>
   );
