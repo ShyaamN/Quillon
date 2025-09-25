@@ -98,8 +98,7 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
             onClick={onBack}
             data-testid="button-back-to-essays"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Essays
+            Essays
           </Button>
           
           <div className="flex items-center gap-2">

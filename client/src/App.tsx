@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import Dashboard from "@/components/Dashboard";
 import EssayList from "@/components/EssayList";
 import EssayEditor from "@/components/EssayEditor";
@@ -148,12 +149,14 @@ function Router() {
         {currentView === 'essays' && (
           <div className="min-h-screen bg-background">
             <div className="p-6">
-              <button 
+              <Button 
                 onClick={handleBackToDashboard}
-                className="mb-4 text-sm text-muted-foreground hover:text-foreground"
+                variant="ghost"
+                size="sm"
+                className="mb-4"
               >
-                ← Back to Dashboard
-              </button>
+                Dashboard
+              </Button>
               <EssayList
                 essays={essays}
                 onSelectEssay={handleSelectEssay}
@@ -174,12 +177,16 @@ function Router() {
         
         {currentView === 'extracurriculars' && (
           <div className="min-h-screen bg-background">
-            <button 
-              onClick={handleBackToDashboard}
-              className="p-6 pb-0 text-sm text-muted-foreground hover:text-foreground"
-            >
-              ← Back to Dashboard
-            </button>
+            <div className="p-6 pb-0">
+              <Button 
+                onClick={handleBackToDashboard}
+                variant="ghost"
+                size="sm"
+                className="mb-4"
+              >
+                Dashboard
+              </Button>
+            </div>
             <ExtracurricularList
               activities={activities}
               onAddNew={() => console.log('Add new activity')}
