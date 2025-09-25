@@ -78,14 +78,24 @@ export default function ExtracurricularCard({
       
       <CardContent className="space-y-3">
         <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-1">Description</h4>
+          <div className="flex items-center justify-between mb-1">
+            <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+            <span className={`text-xs ${activity.description.length > 150 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {activity.description.length}/150
+            </span>
+          </div>
           <p className="text-sm leading-relaxed" data-testid={`text-description-${activity.id}`}>
             {activity.description}
           </p>
         </div>
         
         <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-1">Impact</h4>
+          <div className="flex items-center justify-between mb-1">
+            <h4 className="text-sm font-medium text-muted-foreground">Impact</h4>
+            <span className={`text-xs ${activity.impact.length > 150 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {activity.impact.length}/150
+            </span>
+          </div>
           <p className="text-sm leading-relaxed" data-testid={`text-impact-${activity.id}`}>
             {activity.impact}
           </p>
