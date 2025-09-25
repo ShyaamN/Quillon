@@ -314,10 +314,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getUserId(req);
       const chatSchema = z.object({
         message: z.string().min(1).max(1000),
-        essayId: z.string().optional()
+        essayId: z.string().optional(),
+        essayContent: z.string().optional()
       });
       
-      const { message, essayId } = chatSchema.parse(req.body);
+      const { message, essayId, essayContent } = chatSchema.parse(req.body);
       
       let essayContext = '';
       if (essayId) {
@@ -325,6 +326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (essay) {
           essayContext = essay.content.replace(/<[^>]*>/g, '').trim();
         }
+      }
+      if (!essayContext && essayContent) {
+        essayContext = essayContent.replace(/<[^>]*>/g, '').trim();
       }
       
       const response = await generateChatResponse(message, essayContext);
@@ -338,6 +342,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: 'AI service is not configured' });
       }
       res.status(500).json({ error: 'Failed to generate chat response' });
+    }
+  });
+
+  // POST /api/ai/essay-feedback - Analyze raw essay content without saving
+  app.post('/api/ai/essay-feedback', requireAuth, async (_req: any, res) => {
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ error: 'AI service is not configured' });
+      }
+
+      const feedbackSchema = z.object({
+        content: z.string().min(50, 'Essay content is too short')
+      });
+
+      const { content } = feedbackSchema.parse(_req.body || {});
+      const plainTextContent = content.replace(/<[^>]*>/g, '').trim();
+
+      if (!plainTextContent) {
+        return res.status(400).json({ error: 'Essay content is empty' });
+      }
+
+      const feedback = await analyzeEssayFeedback(plainTextContent);
+      res.json(feedback);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid essay data', details: error.errors });
+      }
+      console.error('Error analyzing essay content:', error);
+      if (error instanceof Error && error.message.includes('not configured')) {
+        return res.status(503).json({ error: 'AI service is not configured' });
+      }
+      res.status(500).json({ error: 'Failed to analyze essay' });
+    }
+  });
+
+  // POST /api/ai/suggest-edit - Generate edit suggestions without saving
+  app.post('/api/ai/suggest-edit', requireAuth, async (_req: any, res) => {
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ error: 'AI service is not configured' });
+      }
+
+      const editSchema = z.object({
+        content: z.string().min(50, 'Essay content is too short'),
+        request: z.string().min(1).max(500)
+      });
+
+      const { content, request } = editSchema.parse(_req.body || {});
+      const plainTextContent = content.replace(/<[^>]*>/g, '').trim();
+
+      if (!plainTextContent) {
+        return res.status(400).json({ error: 'Essay content is empty' });
+      }
+
+      const suggestion = await suggestEssayEdit(plainTextContent, request);
+      res.json(suggestion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid edit request', details: error.errors });
+      }
+      console.error('Error generating edit suggestion:', error);
+      if (error instanceof Error && error.message.includes('not configured')) {
+        return res.status(503).json({ error: 'AI service is not configured' });
+      }
+      res.status(500).json({ error: 'Failed to generate edit suggestion' });
     }
   });
 

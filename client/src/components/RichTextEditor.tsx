@@ -14,6 +14,74 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
   const editorRef = useRef<HTMLDivElement>(null);
   const [wordCount, setWordCount] = useState(0);
 
+  const sanitizePastedHtml = (input: string) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(input, 'text/html');
+    const body = doc.body;
+
+    if (!body) {
+      return input;
+    }
+    const allowedTags = new Set([
+      'P',
+      'BR',
+      'STRONG',
+      'EM',
+      'B',
+      'I',
+      'U',
+      'UL',
+      'OL',
+      'LI',
+      'BLOCKQUOTE',
+      'H1',
+      'H2',
+      'H3',
+      'H4',
+      'DIV',
+      'SPAN'
+    ]);
+
+    const elements = Array.from(body.querySelectorAll('*'));
+
+    elements.forEach((el) => {
+      if (!allowedTags.has(el.tagName)) {
+        const parent = el.parentNode;
+        if (!parent) return;
+
+        while (el.firstChild) {
+          parent.insertBefore(el.firstChild, el);
+        }
+        parent.removeChild(el);
+        return;
+      }
+
+      Array.from(el.attributes).forEach((attr) => {
+        el.removeAttribute(attr.name);
+      });
+    });
+
+    return body.innerHTML;
+  };
+
+  const escapeHtml = (unsafe: string) =>
+    unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+  const convertTextToHtml = (text: string) => {
+    const paragraphs = text.split(/\r?\n\r?\n/);
+    return paragraphs
+      .map((paragraph) => {
+        const withBreaks = escapeHtml(paragraph).replace(/\r?\n/g, '<br>');
+        return `<p>${withBreaks}</p>`;
+      })
+      .join('');
+  };
+
   const execCommand = (command: string, value?: string) => {
     // Ensure editor has focus before executing command
     if (editorRef.current) {
@@ -37,39 +105,26 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    // Prevent default paste behavior to avoid formatting issues
     e.preventDefault();
-    
-    if (editorRef.current) {
-      // Get plain text from clipboard
-      const text = e.clipboardData.getData('text/plain');
-      
-      // Insert text at current cursor position
-      if (document.getSelection) {
-        const selection = document.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          range.deleteContents();
-          range.insertNode(document.createTextNode(text));
-          
-          // Move cursor to end of inserted text
-          range.setStartAfter(range.endContainer);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }
-      
-      // Trigger input handling to update content and word count
-      handleInput();
-      
-      // Ensure editor maintains focus after paste
-      setTimeout(() => {
-        if (editorRef.current) {
-          editorRef.current.focus();
-        }
-      }, 0);
+
+    if (!editorRef.current) return;
+
+    const html = e.clipboardData.getData('text/html');
+    const text = e.clipboardData.getData('text/plain');
+    const filteredHtml = html ? sanitizePastedHtml(html) : convertTextToHtml(text);
+
+    if (filteredHtml) {
+      document.execCommand('insertHTML', false, filteredHtml);
+    } else {
+      document.execCommand('insertText', false, text);
     }
+
+    requestAnimationFrame(() => {
+      if (editorRef.current) {
+        editorRef.current.focus();
+        handleInput();
+      }
+    });
   };
 
   useEffect(() => {

@@ -61,22 +61,24 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
   };
 
   const handleGenerateFeedback = async () => {
-    if (!currentEssay.id) {
-      // If essay doesn't have an ID, save it first
-      const newEssay = { ...currentEssay, id: Date.now().toString(), lastModified: new Date() };
-      onSave(newEssay);
-      setCurrentEssay(newEssay);
+    const content = currentEssay.content?.trim();
+    if (!content) {
+      setFeedbackError('Please add some content to your essay before requesting feedback.');
+      setShowFeedback(false);
       return;
     }
 
     setIsFeedbackLoading(true);
     setFeedbackError(null);
+    setFeedbackData(null);
+    setShowFeedback(true);
     
     try {
-      const response = await apiRequest('POST', `/api/essays/${currentEssay.id}/feedback`);
+      const response = await apiRequest('POST', `/api/ai/essay-feedback`, {
+        content: currentEssay.content,
+      });
       const feedback = await response.json();
       setFeedbackData(feedback);
-      setShowFeedback(true);
     } catch (error) {
       console.error('Error getting feedback:', error);
       setFeedbackError(error instanceof Error ? error.message : 'Failed to get feedback');
@@ -85,13 +87,29 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
     }
   };
 
-  const handleAIEdit = (suggestion: string) => {
-    // Simulate AI suggesting an edit
-    setAiSuggestion({
-      original: "This experience taught me a lot",
-      suggested: suggestion,
-      position: { top: 200, left: 100 }
-    });
+  const handleAIEdit = async (request: string) => {
+    try {
+      if (!currentEssay.content?.trim()) {
+        setFeedbackError('Add essay content before requesting an edit suggestion.');
+        return;
+      }
+
+      const response = await apiRequest('POST', '/api/ai/suggest-edit', {
+        content: currentEssay.content,
+        request,
+      });
+
+      const suggestion = await response.json();
+
+      setAiSuggestion({
+        original: suggestion.originalText,
+        suggested: suggestion.suggestedText,
+        position: { top: 180, left: 120 }
+      });
+    } catch (error) {
+      console.error('Error generating edit suggestion:', error);
+      setFeedbackError(error instanceof Error ? error.message : 'Failed to generate edit suggestion');
+    }
   };
 
   const handleKeepSuggestion = () => {
@@ -218,10 +236,14 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
         </div>
 
         {/* Right Sidebar */}
-        <div className="w-80 border-l bg-card/30 flex flex-col">
+        <div className="w-80 border-l bg-card/30 flex flex-col min-h-0">
           {/* AI Chat */}
-          <div className="flex-1 p-4">
-            <AIChat onSuggestEdit={handleAIEdit} />
+          <div className="flex-1 p-4 min-h-0">
+            <AIChat
+              onSuggestEdit={handleAIEdit}
+              essayContent={currentEssay.content}
+              essayId={currentEssay.id}
+            />
           </div>
           
           {/* Feedback Button */}
@@ -238,7 +260,7 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
             </Button>
             
             <EssayFeedback
-              isVisible={showFeedback}
+          isVisible={showFeedback || isFeedbackLoading || !!feedbackError}
               onGenerateFeedback={handleGenerateFeedback}
               isLoading={isFeedbackLoading}
               feedbackData={feedbackData}

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, Loader2 } from 'lucide-react';
+import { Send, User, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { apiRequest } from '@/lib/queryClient';
 
 interface Message {
   id: string;
@@ -14,19 +15,22 @@ interface Message {
 
 interface AIChatProps {
   onSuggestEdit?: (suggestion: string) => void;
+  essayContent?: string;
+  essayId?: string;
 }
 
-export default function AIChat({ onSuggestEdit }: AIChatProps) {
+export default function AIChat({ onSuggestEdit, essayContent, essayId }: AIChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hi! I'm here to help you with your college essays. I can provide feedback, suggest improvements, or help you br<em>a</em>instorm ideas. What would you like to work on?",
+      content: "Hi! I'm Quillius, your AI writing partner. Ask me anything about your essay, brainstorming ideas, or how to improve specific sections.",
       role: 'assistant',
       timestamp: new Date(Date.now() - 1000 * 60 * 5)
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,26 +55,43 @@ export default function AIChat({ onSuggestEdit }: AIChatProps) {
     setMessages(prev => [...prev, newMessage]);
     setInputValue('');
     setIsLoading(true);
+    setErrorMessage(null);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        "That's a great question! Based on what you've written, I'd suggest focusing more on the specific impact you had rather than just describing the activity.",
-        "I can help you make that paragraph more compelling. Try starting with a vivid scene that draws the reader in immediately.",
-        "Your essay shows good self-reflection. Consider adding more concrete examples to support your main points.",
-        "This is a strong start! Would you like me to suggest some specific edits to improve the flow between your paragraphs?"
-      ];
-      
-      const responseMessage: Message = {
+    try {
+      const payload: Record<string, string> = {
+        message: newMessage.content.trim(),
+      };
+
+      if (essayId) {
+        payload.essayId = essayId;
+      } else if (essayContent) {
+        payload.essayContent = essayContent;
+      }
+
+      const response = await apiRequest('POST', '/api/chat', payload);
+      const data = await response.json();
+
+      const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: responses[Math.floor(Math.random() * responses.length)],
+        content: data.response || "I'm not sure how to help with that right now.",
         role: 'assistant',
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, responseMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Something went wrong.';
+      setErrorMessage(message.includes('503') ? 'AI service is currently unavailable. Please verify your Gemini API key.' : message);
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm having trouble connecting to the AI service right now. Please try again in a moment.",
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -110,6 +131,7 @@ export default function AIChat({ onSuggestEdit }: AIChatProps) {
                       ? 'bg-primary text-primary-foreground ml-auto'
                       : 'bg-muted text-muted-foreground'
                   }`}
+                      style={{ whiteSpace: 'pre-wrap' }}
                   data-testid={`message-${message.role}-${message.id}`}
                 >
                   {message.content}
@@ -158,6 +180,13 @@ export default function AIChat({ onSuggestEdit }: AIChatProps) {
             <Send className="w-4 h-4" />
           </Button>
         </div>
+
+        {errorMessage && (
+          <div className="flex items-center gap-2 text-xs text-destructive">
+            <AlertTriangle className="w-3 h-3" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

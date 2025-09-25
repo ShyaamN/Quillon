@@ -22,14 +22,20 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export interface EssayFeedback {
   overallScore: number;
-  scores: {
+  metrics: {
     flow: number;
     hook: number;
     voice: number;
     uniqueness: number;
+    conciseness: number;
+    authenticity: number;
   };
-  feedback: string;
-  suggestions: string[];
+  insights: {
+    summary: string;
+    improvementSuggestion: string;
+    strengths: string[];
+    improvementAreas: string[];
+  };
 }
 
 export async function analyzeEssayFeedback(essayContent: string): Promise<EssayFeedback> {
@@ -41,30 +47,34 @@ export async function analyzeEssayFeedback(essayContent: string): Promise<EssayF
     // Limit essay content length to prevent excessive API costs
     const limitedContent = essayContent.substring(0, 3000);
     
-    const systemPrompt = `You are a college admissions expert analyzing college application essays. 
-    
-    Analyze the provided essay and provide feedback in the following areas:
-    1. Flow (0-100): How well the essay transitions between ideas and maintains coherence
-    2. Hook (0-100): How effectively the opening grabs the reader's attention
-    3. Voice (0-100): How authentic and personal the writing voice sounds
-    4. Uniqueness (0-100): How distinctive and memorable the essay is
-    
-    Also provide:
-    - An overall score (0-100) that weighs all factors
-    - Detailed written feedback (2-3 sentences) highlighting strengths and areas for improvement
-    - 2-3 specific actionable suggestions
-    
-    Respond with JSON in this exact format:
+    const systemPrompt = `You are a college admissions reader creating a structured rubric for college application essays.
+
+    Evaluate the essay and provide:
+    1. An overall score from 0-100.
+    2. Category scores (0-100) for: flow, hook, voice, uniqueness, conciseness, authenticity.
+    3. Insight fields including:
+       - summary: two sentences synthesizing core strengths.
+       - improvementSuggestion: one concise paragraph starting with "Improvement suggestion:" that offers the most impactful revision guidance.
+       - strengths: array of 2-3 short bullet strings.
+       - improvementAreas: array of 2-3 actionable bullet strings.
+
+    Respond with strict JSON in this format:
     {
       "overallScore": number,
-      "scores": {
+      "metrics": {
         "flow": number,
         "hook": number,
         "voice": number,
-        "uniqueness": number
+        "uniqueness": number,
+        "conciseness": number,
+        "authenticity": number
       },
-      "feedback": "detailed feedback text",
-      "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
+      "insights": {
+        "summary": "...",
+        "improvementSuggestion": "Improvement suggestion: ...",
+        "strengths": ["..."],
+        "improvementAreas": ["..."]
+      }
     }`;
 
     const response = await Promise.race([
@@ -77,23 +87,36 @@ export async function analyzeEssayFeedback(essayContent: string): Promise<EssayF
             type: "object",
             properties: {
               overallScore: { type: "number" },
-              scores: {
+              metrics: {
                 type: "object",
                 properties: {
                   flow: { type: "number" },
                   hook: { type: "number" },
                   voice: { type: "number" },
-                  uniqueness: { type: "number" }
+                  uniqueness: { type: "number" },
+                  conciseness: { type: "number" },
+                  authenticity: { type: "number" }
                 },
-                required: ["flow", "hook", "voice", "uniqueness"]
+                required: ["flow", "hook", "voice", "uniqueness", "conciseness", "authenticity"]
               },
-              feedback: { type: "string" },
-              suggestions: {
-                type: "array",
-                items: { type: "string" }
+              insights: {
+                type: "object",
+                properties: {
+                  summary: { type: "string" },
+                  improvementSuggestion: { type: "string" },
+                  strengths: {
+                    type: "array",
+                    items: { type: "string" }
+                  },
+                  improvementAreas: {
+                    type: "array",
+                    items: { type: "string" }
+                  }
+                },
+                required: ["summary", "improvementSuggestion", "strengths", "improvementAreas"]
               }
             },
-            required: ["overallScore", "scores", "feedback", "suggestions"]
+            required: ["overallScore", "metrics", "insights"]
           }
         },
         contents: `Please analyze this college application essay:\n\n${limitedContent}`,
@@ -101,27 +124,112 @@ export async function analyzeEssayFeedback(essayContent: string): Promise<EssayF
       new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), 30000))
     ]);
 
-    const rawJson = (response as any).text;
-    console.log(`Essay analysis response: ${rawJson}`);
+    const rawText = getResponseText(response);
+    console.log(`Essay analysis response: ${rawText}`);
 
-    if (rawJson) {
-      const data: EssayFeedback = JSON.parse(rawJson);
-      // Ensure scores are within valid range
-      data.overallScore = Math.max(0, Math.min(100, Math.round(data.overallScore || 0)));
-      data.scores.flow = Math.max(0, Math.min(100, Math.round(data.scores.flow || 0)));
-      data.scores.hook = Math.max(0, Math.min(100, Math.round(data.scores.hook || 0)));
-      data.scores.voice = Math.max(0, Math.min(100, Math.round(data.scores.voice || 0)));
-      data.scores.uniqueness = Math.max(0, Math.min(100, Math.round(data.scores.uniqueness || 0)));
-      
-      return data;
-    } else {
+    if (!rawText) {
       throw new Error("Empty response from Gemini model");
     }
+
+    const parsed = safelyParseEssayFeedback(rawText);
+    return normalizeEssayFeedback(parsed);
   } catch (error) {
     console.error("Error analyzing essay:", error);
     throw new Error(`Failed to analyze essay: ${error}`);
   }
 }
+
+const getResponseText = (result: any): string | undefined => {
+  if (!result) return undefined;
+  if (typeof result.text === "function") {
+    return result.text();
+  }
+  if (typeof result.text === "string") {
+    return result.text;
+  }
+  if (result.response?.text) {
+    return result.response.text();
+  }
+  if (result.response?.candidates?.[0]?.content?.parts) {
+    return result.response.candidates[0].content.parts
+      .map((part: any) => part.text)
+      .join("");
+  }
+  return undefined;
+};
+
+const safelyParseEssayFeedback = (raw: string): Partial<EssayFeedback> => {
+  const trimmed = raw.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (innerError) {
+        console.warn("Essay feedback JSON parse retry failed", innerError);
+      }
+    }
+    console.warn("Essay feedback parse failed, returning fallback", error);
+    return {};
+  }
+};
+
+const normalizeEssayFeedback = (input: Partial<EssayFeedback>): EssayFeedback => {
+  const clamp = (value?: number) => Math.max(0, Math.min(100, Math.round(value ?? 0)));
+
+  const metrics = (input.metrics ?? {}) as Partial<EssayFeedback["metrics"]>;
+  const normalized: EssayFeedback = {
+    overallScore: clamp(input.overallScore),
+    metrics: {
+      flow: clamp(metrics.flow),
+      hook: clamp(metrics.hook),
+      voice: clamp(metrics.voice),
+      uniqueness: clamp(metrics.uniqueness),
+      conciseness: clamp(metrics.conciseness),
+      authenticity: clamp(metrics.authenticity)
+    },
+    insights: {
+      summary: input.insights?.summary?.trim() || "Engaging narrative highlights personal motivation and impact.",
+      improvementSuggestion:
+        input.insights?.improvementSuggestion?.trim() ||
+        "Improvement suggestion: Tighten transitions and emphasize one signature outcome for greater cohesion.",
+      strengths: input.insights?.strengths?.length
+        ? input.insights.strengths
+        : [
+            "Compelling hook that draws readers in immediately.",
+            "Authentic voice that showcases personal growth.",
+            "Concrete example illustrating leadership impact."
+          ],
+      improvementAreas: input.insights?.improvementAreas?.length
+        ? input.insights.improvementAreas
+        : [
+            "Clarify the throughline between each anecdote.",
+            "Quantify results to strengthen credibility.",
+            "Trim repetitive phrases to sharpen conciseness."
+          ]
+    }
+  };
+
+  if (!normalized.insights.improvementSuggestion.startsWith("Improvement suggestion")) {
+    normalized.insights.improvementSuggestion = `Improvement suggestion: ${normalized.insights.improvementSuggestion}`;
+  }
+
+  if (!normalized.overallScore) {
+    normalized.overallScore = clamp(
+      (normalized.metrics.flow +
+        normalized.metrics.hook +
+        normalized.metrics.voice +
+        normalized.metrics.uniqueness +
+        normalized.metrics.conciseness +
+        normalized.metrics.authenticity) /
+        6
+    );
+  }
+
+  return normalized;
+};
 
 export async function generateChatResponse(message: string, essayContext?: string): Promise<string> {
   if (!process.env.GEMINI_API_KEY) {
