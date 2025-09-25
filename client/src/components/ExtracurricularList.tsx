@@ -45,7 +45,7 @@ export default function ExtracurricularList({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-primary" />
-          <h1 className="text-2xl font-bold">Extracurricular Activities</h1>
+          <h1 className="text-2xl font-heading font-bold">Extracurricular Activities</h1>
         </div>
         <Button onClick={onAddNew} data-testid="button-add-activity">
           <Plus className="w-4 h-4 mr-2" />
@@ -115,7 +115,7 @@ export default function ExtracurricularList({
           <div className="mx-auto w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-4">
             <Trophy className="w-6 h-6 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-medium mb-2">No activities yet</h3>
+          <h3 className="text-lg font-heading font-medium mb-2">No activities yet</h3>
           <p className="text-muted-foreground mb-4">
             Start building your extracurricular profile for college applications
           </p>
@@ -126,7 +126,7 @@ export default function ExtracurricularList({
         </Card>
       ) : filteredActivities.length === 0 ? (
         <Card className="p-8 text-center">
-          <h3 className="text-lg font-medium mb-2">No activities found</h3>
+          <h3 className="text-lg font-heading font-medium mb-2">No activities found</h3>
           <p className="text-muted-foreground">
             Try adjusting your search terms
           </p>

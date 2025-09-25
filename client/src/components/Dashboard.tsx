@@ -11,7 +11,7 @@ export default function Dashboard({ onNavigateToEssays, onNavigateToExtracurricu
   return (
     <div className="p-6 space-y-6">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Quillon</h1>
+        <h1 className="text-4xl font-heading font-bold text-foreground mb-2">Quillon</h1>
         <p className="text-muted-foreground">Your AI-powered college application assistant</p>
       </div>
 

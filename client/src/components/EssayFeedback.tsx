@@ -32,7 +32,7 @@ export default function EssayFeedback({ isVisible, onGenerateFeedback, isLoading
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-lg font-semibold">Essay Feedback</CardTitle>
+        <CardTitle className="text-lg font-heading font-semibold">Essay Feedback</CardTitle>
         <Button
           variant="ghost"
           size="sm"
@@ -75,7 +75,7 @@ export default function EssayFeedback({ isVisible, onGenerateFeedback, isLoading
 
         {/* Detailed Feedback */}
         <div className="pt-4 border-t">
-          <h4 className="font-medium mb-2">Detailed Analysis</h4>
+          <h4 className="font-heading font-medium mb-2">Detailed Analysis</h4>
           <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-detailed-feedback">
             {feedback}
           </p>

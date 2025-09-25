@@ -33,7 +33,7 @@ export default function EssayList({ essays, onSelectEssay, onNewEssay }: EssayLi
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-semibold">Your Essays</h2>
+          <h2 className="text-xl font-heading font-semibold">Your Essays</h2>
         </div>
         <Button onClick={onNewEssay} data-testid="button-new-essay">
           <Plus className="w-4 h-4 mr-2" />
@@ -47,7 +47,7 @@ export default function EssayList({ essays, onSelectEssay, onNewEssay }: EssayLi
           <div className="mx-auto w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-4">
             <FileText className="w-6 h-6 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-medium mb-2">No essays yet</h3>
+          <h3 className="text-lg font-heading font-medium mb-2">No essays yet</h3>
           <p className="text-muted-foreground mb-4">
             Start writing your first college application essay
           </p>

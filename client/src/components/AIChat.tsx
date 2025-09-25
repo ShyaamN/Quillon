@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Send, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,7 +84,7 @@ export default function AIChat({ onSuggestEdit }: AIChatProps) {
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
-          <Bot className="w-5 h-5 text-primary" />
+          <div className="w-5 h-5 rounded-full bg-gradient-to-r from-primary to-accent flex-shrink-0"></div>
           AI Assistant
         </CardTitle>
       </CardHeader>
@@ -98,8 +98,8 @@ export default function AIChat({ onSuggestEdit }: AIChatProps) {
               className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
               <Avatar className="w-8 h-8 flex-shrink-0">
-                <AvatarFallback className={message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}>
-                  {message.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                <AvatarFallback className={message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-gradient-to-r from-primary to-accent'}>
+                  {message.role === 'user' ? <User className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full bg-white/20"></div>}
                 </AvatarFallback>
               </Avatar>
               
@@ -124,8 +124,8 @@ export default function AIChat({ onSuggestEdit }: AIChatProps) {
           {isLoading && (
             <div className="flex gap-3">
               <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-muted">
-                  <Bot className="w-4 h-4" />
+                <AvatarFallback className="bg-gradient-to-r from-primary to-accent">
+                  <div className="w-4 h-4 rounded-full bg-white/20"></div>
                 </AvatarFallback>
               </Avatar>
               <div className="bg-muted rounded-lg px-3 py-2">
