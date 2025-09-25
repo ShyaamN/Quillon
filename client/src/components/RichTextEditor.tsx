@@ -151,7 +151,7 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
         contentEditable
         onInput={handleInput}
         onPaste={handlePaste}
-        className="min-h-[400px] p-4 focus:outline-none text-foreground leading-relaxed"
+        className="min-h-[400px] max-h-[60vh] overflow-y-auto p-4 focus:outline-none text-foreground leading-relaxed"
         data-placeholder={placeholder}
         data-testid="editor-content"
         suppressContentEditableWarning={true}
