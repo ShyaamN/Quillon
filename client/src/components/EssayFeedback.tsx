@@ -43,7 +43,7 @@ export default function EssayFeedback({ isVisible, onGenerateFeedback, isLoading
   if (!isVisible) return null;
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-h-[calc(60vh-8rem)] overflow-y-auto">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-lg font-heading font-semibold">Essay Feedback</CardTitle>
         <Button
