@@ -1,0 +1,109 @@
+import { Plus, FileText, Clock, BookOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+interface Essay {
+  id: string;
+  title: string;
+  collegeTarget: string;
+  essayType: string;
+  wordCount: number;
+  lastModified: Date;
+  content: string;
+}
+
+interface EssayListProps {
+  essays: Essay[];
+  onSelectEssay: (essay: Essay) => void;
+  onNewEssay: () => void;
+}
+
+export default function EssayList({ essays, onSelectEssay, onNewEssay }: EssayListProps) {
+  const formatDate = (date: Date) => {
+    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+      Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+      'day'
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-semibold">Your Essays</h2>
+        </div>
+        <Button onClick={onNewEssay} data-testid="button-new-essay">
+          <Plus className="w-4 h-4 mr-2" />
+          New Essay
+        </Button>
+      </div>
+
+      {/* Essays Grid */}
+      {essays.length === 0 ? (
+        <Card className="p-8 text-center">
+          <div className="mx-auto w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-4">
+            <FileText className="w-6 h-6 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">No essays yet</h3>
+          <p className="text-muted-foreground mb-4">
+            Start writing your first college application essay
+          </p>
+          <Button onClick={onNewEssay}>
+            <Plus className="w-4 h-4 mr-2" />
+            Create Your First Essay
+          </Button>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {essays.map((essay) => (
+            <Card 
+              key={essay.id} 
+              className="hover-elevate cursor-pointer"
+              onClick={() => onSelectEssay(essay)}
+              data-testid={`card-essay-${essay.id}`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base leading-tight line-clamp-2">
+                    {essay.title}
+                  </CardTitle>
+                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {essay.collegeTarget}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {essay.essayType}
+                  </Badge>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pt-0">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center gap-4">
+                    <span>{essay.wordCount} words</span>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatDate(essay.lastModified)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {essay.content && (
+                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                    {essay.content.replace(/<[^>]*>/g, '').substring(0, 100)}...
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

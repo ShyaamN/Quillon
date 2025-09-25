@@ -1,0 +1,164 @@
+import { useState, useRef, useEffect } from 'react';
+import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+interface Message {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant';
+  timestamp: Date;
+}
+
+interface AIChatProps {
+  onSuggestEdit?: (suggestion: string) => void;
+}
+
+export default function AIChat({ onSuggestEdit }: AIChatProps) {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      content: "Hi! I'm here to help you with your college essays. I can provide feedback, suggest improvements, or help you brainstorm ideas. What would you like to work on?",
+      role: 'assistant',
+      timestamp: new Date(Date.now() - 1000 * 60 * 5)
+    }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      content: inputValue,
+      role: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    setInputValue('');
+    setIsLoading(true);
+
+    // Simulate AI response
+    setTimeout(() => {
+      const responses = [
+        "That's a great question! Based on what you've written, I'd suggest focusing more on the specific impact you had rather than just describing the activity.",
+        "I can help you make that paragraph more compelling. Try starting with a vivid scene that draws the reader in immediately.",
+        "Your essay shows good self-reflection. Consider adding more concrete examples to support your main points.",
+        "This is a strong start! Would you like me to suggest some specific edits to improve the flow between your paragraphs?"
+      ];
+      
+      const responseMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: responses[Math.floor(Math.random() * responses.length)],
+        role: 'assistant',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, responseMessage]);
+      setIsLoading(false);
+    }, 1500);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  return (
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Bot className="w-5 h-5 text-primary" />
+          AI Assistant
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="flex-1 flex flex-col gap-4 min-h-0">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2" data-testid="chat-messages">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+            >
+              <Avatar className="w-8 h-8 flex-shrink-0">
+                <AvatarFallback className={message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}>
+                  {message.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className={`flex-1 max-w-[80%] ${message.role === 'user' ? 'text-right' : ''}`}>
+                <div
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    message.role === 'user'
+                      ? 'bg-primary text-primary-foreground ml-auto'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                  data-testid={`message-${message.role}-${message.id}`}
+                >
+                  {message.content}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {isLoading && (
+            <div className="flex gap-3">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-muted">
+                  <Bot className="w-4 h-4" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="bg-muted rounded-lg px-3 py-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        <div className="flex gap-2">
+          <Input
+            ref={inputRef}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask me anything about your essay..."
+            disabled={isLoading}
+            data-testid="input-chat-message"
+            className="flex-1"
+          />
+          <Button
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || isLoading}
+            size="icon"
+            data-testid="button-send-message"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
