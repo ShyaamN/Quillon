@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertEssaySchema, insertExtracurricularSchema } from "@shared/schema";
-import { analyzeEssayFeedback, generateChatResponse, suggestEssayEdit } from "./gemini";
+import { analyzeEssayFeedback, generateChatResponse, suggestEssayEdit, refineExtracurricularActivity } from "./gemini";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -255,6 +255,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: 'AI service is not configured' });
       }
       res.status(500).json({ error: 'Failed to generate edit suggestion' });
+    }
+  });
+
+  // POST /api/extracurriculars/:id/refine - AI-powered refinement suggestions for activities
+  app.post('/api/extracurriculars/:id/refine', async (req, res) => {
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ error: 'AI service is not configured' });
+      }
+      
+      const activity = await storage.getExtracurricular(req.params.id);
+      if (!activity) {
+        return res.status(404).json({ error: 'Extracurricular activity not found' });
+      }
+      
+      // Validate that activity has required fields
+      if (!activity.activityName?.trim() || !activity.description?.trim() || !activity.impact?.trim()) {
+        return res.status(400).json({ error: 'Activity must have name, description, and impact to be refined' });
+      }
+      
+      const refinement = await refineExtracurricularActivity({
+        activityName: activity.activityName,
+        description: activity.description,
+        role: activity.role || '',
+        duration: activity.duration || '',
+        impact: activity.impact
+      });
+      
+      res.json(refinement);
+    } catch (error) {
+      console.error('Error refining extracurricular activity:', error);
+      if (error instanceof Error && error.message.includes('not configured')) {
+        return res.status(503).json({ error: 'AI service is not configured' });
+      }
+      res.status(500).json({ error: 'Failed to refine extracurricular activity' });
     }
   });
 

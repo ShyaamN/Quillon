@@ -146,6 +146,96 @@ export async function generateChatResponse(message: string, essayContext?: strin
   }
 }
 
+export async function refineExtracurricularActivity(activity: {
+  activityName: string;
+  description: string;
+  role: string;
+  duration: string;
+  impact: string;
+}): Promise<{
+  refinedDescription: string;
+  refinedImpact: string;
+  suggestions: string[];
+  strengthScore: number;
+}> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured");
+  }
+  
+  try {
+    const systemPrompt = `You are a college admissions expert specializing in extracurricular activities. Help students optimize their activity descriptions to make them more compelling for college applications.
+
+    Analyze the provided extracurricular activity and provide:
+    1. A refined description that highlights leadership, initiative, and concrete achievements
+    2. A refined impact statement that quantifies results and shows meaningful contribution
+    3. 3-4 specific suggestions for improvement
+    4. A strength score (0-100) rating how compelling this activity is for admissions
+
+    Guidelines:
+    - Use active voice and strong action verbs
+    - Include specific numbers, metrics, and outcomes when possible
+    - Highlight leadership roles, initiative taken, and problems solved
+    - Show growth, learning, and impact on others/community
+    - Keep descriptions concise but impactful
+    - Avoid generic or vague language
+
+    Respond with JSON in this exact format:
+    {
+      "refinedDescription": "improved activity description",
+      "refinedImpact": "improved impact statement", 
+      "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3", "suggestion 4"],
+      "strengthScore": number
+    }`;
+
+    const activityText = `Activity: ${activity.activityName}
+Role: ${activity.role}
+Duration: ${activity.duration}
+Current Description: ${activity.description}
+Current Impact: ${activity.impact}`;
+
+    const response = await Promise.race([
+      ai.models.generateContent({
+        model: "gemini-2.5-pro",
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              refinedDescription: { type: "string" },
+              refinedImpact: { type: "string" },
+              suggestions: {
+                type: "array",
+                items: { type: "string" }
+              },
+              strengthScore: { type: "number" }
+            },
+            required: ["refinedDescription", "refinedImpact", "suggestions", "strengthScore"]
+          }
+        },
+        contents: `Please analyze and refine this extracurricular activity:\n\n${activityText}`,
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), 30000))
+    ]);
+
+    const rawJson = (response as any).text;
+    if (rawJson) {
+      const data = JSON.parse(rawJson);
+      return {
+        refinedDescription: data.refinedDescription || activity.description,
+        refinedImpact: data.refinedImpact || activity.impact,
+        suggestions: data.suggestions || ["Consider adding more specific details"],
+        strengthScore: Math.max(0, Math.min(100, Math.round(data.strengthScore || 50)))
+      };
+    } else {
+      throw new Error("Empty response from Gemini model");
+    }
+  } catch (error) {
+    console.error("Error refining extracurricular activity:", error);
+    throw new Error(`Failed to refine extracurricular activity: ${error}`);
+  }
+}
+
 export async function suggestEssayEdit(essayContent: string, userRequest: string): Promise<{
   originalText: string;
   suggestedText: string;
