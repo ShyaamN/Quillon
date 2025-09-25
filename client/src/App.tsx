@@ -118,6 +118,17 @@ function Router() {
     setActivities(prev => prev.filter(a => a.id !== id));
   };
 
+  const handleNewEssayFromDashboard = () => {
+    setSelectedEssay(null);
+    setCurrentView('essay-editor');
+  };
+
+  const handleNewActivityFromDashboard = () => {
+    setCurrentView('extracurriculars');
+    // In the future, this could open a modal or navigate to an activity editor
+    console.log('New activity creation triggered from dashboard');
+  };
+
   return (
     <Switch>
       <Route path="/">
@@ -125,6 +136,8 @@ function Router() {
           <Dashboard
             onNavigateToEssays={handleNavigateToEssays}
             onNavigateToExtracurriculars={handleNavigateToExtracurriculars}
+            onNewEssay={handleNewEssayFromDashboard}
+            onNewActivity={handleNewActivityFromDashboard}
           />
         )}
         

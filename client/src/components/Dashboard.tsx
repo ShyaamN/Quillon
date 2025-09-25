@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 interface DashboardProps {
   onNavigateToEssays: () => void;
   onNavigateToExtracurriculars: () => void;
+  onNewEssay: () => void;
+  onNewActivity: () => void;
 }
 
-export default function Dashboard({ onNavigateToEssays, onNavigateToExtracurriculars }: DashboardProps) {
+export default function Dashboard({ onNavigateToEssays, onNavigateToExtracurriculars, onNewEssay, onNewActivity }: DashboardProps) {
   return (
     <div className="p-6 space-y-6">
       <div className="text-center mb-8">
@@ -82,11 +84,11 @@ export default function Dashboard({ onNavigateToEssays, onNavigateToExtracurricu
 
       {/* Quick Actions */}
       <div className="flex flex-wrap justify-center gap-4 mt-8">
-        <Button variant="outline" size="sm" data-testid="button-new-essay">
+        <Button variant="outline" size="sm" onClick={onNewEssay} data-testid="button-new-essay">
           <PlusCircle className="w-4 h-4 mr-2" />
           New Essay
         </Button>
-        <Button variant="outline" size="sm" data-testid="button-new-activity">
+        <Button variant="outline" size="sm" onClick={onNewActivity} data-testid="button-new-activity">
           <PlusCircle className="w-4 h-4 mr-2" />
           New Activity
         </Button>
