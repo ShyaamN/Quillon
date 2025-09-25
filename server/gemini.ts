@@ -3,7 +3,16 @@
 // - Note that the newest Gemini model series is "gemini-2.5-flash" or "gemini-2.5-pro"
 //   - do not change this unless explicitly requested by the user
 
+// 🔑 TO ADD YOUR GEMINI API KEY:
+// 1. Get your API key from https://makersuite.google.com/app/apikey
+// 2. Set it as an environment variable: $env:GEMINI_API_KEY="your_api_key_here"
+// 3. Or create a .env file in the root directory with: GEMINI_API_KEY=your_api_key_here
+
 import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
 
 if (!process.env.GEMINI_API_KEY) {
   console.warn("GEMINI_API_KEY is not set. AI features will not work.");

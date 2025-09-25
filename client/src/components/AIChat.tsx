@@ -20,7 +20,7 @@ export default function AIChat({ onSuggestEdit }: AIChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hi! I'm here to help you with your college essays. I can provide feedback, suggest improvements, or help you brainstorm ideas. What would you like to work on?",
+      content: "Hi! I'm here to help you with your college essays. I can provide feedback, suggest improvements, or help you br<em>a</em>instorm ideas. What would you like to work on?",
       role: 'assistant',
       timestamp: new Date(Date.now() - 1000 * 60 * 5)
     }
@@ -85,7 +85,7 @@ export default function AIChat({ onSuggestEdit }: AIChatProps) {
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <div className="w-5 h-5 rounded-full bg-gradient-to-r from-primary to-accent flex-shrink-0"></div>
-          AI Assistant
+          Quillius
         </CardTitle>
       </CardHeader>
 

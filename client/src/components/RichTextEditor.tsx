@@ -10,7 +10,7 @@ interface RichTextEditorProps {
   maxWords?: number;
 }
 
-export default function RichTextEditor({ content, onChange, placeholder = "Start writing your essay...", maxWords = 650 }: RichTextEditorProps) {
+export default function RichTextEditor({ content, onChange, placeholder = "Start wr<em>i</em>ting your essay...", maxWords = 650 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [wordCount, setWordCount] = useState(0);
 

@@ -108,7 +108,7 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
               value={currentEssay.title}
               onChange={(e) => setCurrentEssay(prev => ({ ...prev, title: e.target.value }))}
               placeholder="Essay Title"
-              className="font-medium border-none shadow-none focus-visible:ring-0 px-0"
+              className="font-medium border-none shadow-none focus-visible:ring-0 px-0 placeholder:italic placeholder:text-muted-foreground/60"
               data-testid="input-essay-title"
             />
           </div>
