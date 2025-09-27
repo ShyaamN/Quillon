@@ -4,15 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ExtracurricularCard from './ExtracurricularCard';
-
-interface ExtracurricularActivity {
-  id: string;
-  activityName: string;
-  description: string;
-  role: string;
-  duration: string;
-  impact: string;
-}
+import type { ExtracurricularActivity } from '@/hooks/useActivities';
 
 interface ExtracurricularListProps {
   activities: ExtracurricularActivity[];

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Save, FileText, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +43,22 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
     original: string;
     suggested: string;
     position: { top: number; left: number };
+    explanation: string;
   } | null>(null);
+  
+  // Multiple edit suggestions state
+  const [multipleSuggestions, setMultipleSuggestions] = useState<Array<{
+    originalText: string;
+    suggestedText: string;
+    explanation: string;
+  }>>([]);
+  const [isGeneratingAIImprovements, setIsGeneratingAIImprovements] = useState(false);
+  const [suggestionsGenerated, setSuggestionsGenerated] = useState(false);
+
+  // Helper function to calculate word count (matches RichTextEditor logic)
+  const getWordCount = (text: string): number => {
+    return text.trim() ? text.trim().split(/\s+/).length : 0;
+  };
 
   const handleSave = () => {
     onSave(currentEssay);
@@ -71,6 +86,8 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
     setIsFeedbackLoading(true);
     setFeedbackError(null);
     setFeedbackData(null);
+    setSuggestionsGenerated(false); // Reset suggestions flag for new feedback
+    setMultipleSuggestions([]); // Clear any existing suggestions
     setShowFeedback(true);
     
     try {
@@ -104,7 +121,8 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
       setAiSuggestion({
         original: suggestion.originalText,
         suggested: suggestion.suggestedText,
-        position: { top: 180, left: 120 }
+        position: { top: 180, left: 120 },
+        explanation: suggestion.explanation
       });
     } catch (error) {
       console.error('Error generating edit suggestion:', error);
@@ -125,6 +143,137 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
 
   const handleUndoSuggestion = () => {
     setAiSuggestion(null);
+  };
+
+  // Generate multiple edit suggestions when feedback is available
+  useEffect(() => {
+    const generateMultipleEditSuggestions = async () => {
+      if (feedbackData && feedbackData.insights && feedbackData.insights.improvementAreas && feedbackData.insights.improvementAreas.length > 0 && !suggestionsGenerated) {
+        console.log('🎯 Starting multiple edit suggestions generation...');
+        console.log('Feedback data:', feedbackData);
+        console.log('Improvement areas:', feedbackData.insights.improvementAreas);
+        
+        setSuggestionsGenerated(true);
+        
+        try {
+          // Calculate current word count
+          const currentWordCount = getWordCount(currentEssay.content || '');
+          const wordLimit = currentEssay.maxWords;
+          const wordsRemaining = Math.max(0, wordLimit - currentWordCount);
+          const isOverLimit = currentWordCount > wordLimit;
+          
+          // Create a prompt that includes all improvement areas AND word count constraints
+          const improvementPrompt = `Based on this essay feedback analysis:
+          
+Overall Score: ${feedbackData.overallScore}/100
+Improvement Areas: ${feedbackData.insights.improvementAreas.join(', ')}
+
+IMPORTANT WORD COUNT CONSTRAINTS:
+- Current word count: ${currentWordCount} words
+- Word limit: ${wordLimit} words
+- Words ${isOverLimit ? 'over limit' : 'remaining'}: ${isOverLimit ? currentWordCount - wordLimit : wordsRemaining} words
+- Status: Essay is ${isOverLimit ? 'OVER the word limit' : 'within the word limit'}
+
+Generate multiple targeted edit suggestions for this essay that:
+1. Address the specific improvement areas mentioned above
+2. ${isOverLimit ? 'REDUCE the word count to stay within the ' + wordLimit + ' word limit' : 'Stay within the ' + wordLimit + ' word limit (you can use up to ' + wordsRemaining + ' more words if needed)'}
+3. Maintain or improve the essay's quality while respecting the word count constraint
+
+Each suggestion should be mindful of the word count impact - prefer concise, impactful edits over lengthy additions.`;
+
+          console.log('📤 Making API request for multiple suggestions...');
+          console.log('Word count info:', { currentWordCount, wordLimit, wordsRemaining, isOverLimit });
+          
+          const response = await apiRequest('POST', '/api/chat', {
+            message: improvementPrompt + '\n\nGenerate multiple targeted edit suggestions based on the feedback above, ensuring all suggestions respect the word count constraints.',
+            essayContent: currentEssay.content,
+            wordLimit: wordLimit,
+            currentWordCount: currentWordCount
+          });
+
+          const responseText = await response.text();
+          console.log('📥 Raw response:', responseText.substring(0, 500) + '...');
+          
+          let result;
+          try {
+            result = JSON.parse(responseText);
+            console.log('✅ Parsed JSON result:', result);
+          } catch (parseError) {
+            console.error('❌ JSON parsing failed:', parseError);
+            return;
+          }
+
+          if (result.suggestions && Array.isArray(result.suggestions)) {
+            console.log('✅ Setting multiple suggestions:', result.suggestions.length);
+            setMultipleSuggestions(result.suggestions);
+          }
+        } catch (error) {
+          console.error('❌ Error generating multiple edit suggestions:', error);
+        } finally {
+          setIsGeneratingAIImprovements(false);
+        }
+      }
+    };
+
+    generateMultipleEditSuggestions();
+  }, [feedbackData, suggestionsGenerated]);
+
+  const handleGenerateFeedbackEdits = async () => {
+    console.log('🚀 Generate AI Improvements button clicked!');
+    
+    setSuggestionsGenerated(false);
+    setMultipleSuggestions([]);
+    setIsGeneratingAIImprovements(true);
+    
+    try {
+      console.log('📊 Generating essay feedback...');
+      await handleGenerateFeedback();
+    } catch (error) {
+      console.error('❌ Error in handleGenerateFeedbackEdits:', error);
+      setIsGeneratingAIImprovements(false);
+    }
+  };
+
+  const handleKeepSuggestionMultiple = (suggestionIndex?: number) => {
+    if (typeof suggestionIndex === 'number' && multipleSuggestions[suggestionIndex]) {
+      const suggestion = multipleSuggestions[suggestionIndex];
+      const newContent = currentEssay.content.replace(suggestion.originalText, suggestion.suggestedText);
+      handleContentChange(newContent);
+      
+      const updatedSuggestions = multipleSuggestions.filter((_, index) => index !== suggestionIndex);
+      setMultipleSuggestions(updatedSuggestions);
+    }
+  };
+
+  const handleUndoSuggestionMultiple = (suggestionIndex?: number) => {
+    if (typeof suggestionIndex === 'number') {
+      const updatedSuggestions = multipleSuggestions.filter((_, index) => index !== suggestionIndex);
+      setMultipleSuggestions(updatedSuggestions);
+    }
+  };
+
+  const handleKeepAllSuggestions = () => {
+    if (multipleSuggestions.length > 0) {
+      let newContent = currentEssay.content;
+      for (let i = multipleSuggestions.length - 1; i >= 0; i--) {
+        const suggestion = multipleSuggestions[i];
+        newContent = newContent.replace(suggestion.originalText, suggestion.suggestedText);
+      }
+      handleContentChange(newContent);
+      setMultipleSuggestions([]);
+    }
+  };
+
+  const handleRejectAllSuggestions = () => {
+    setMultipleSuggestions([]);
+  };
+
+  const handleMultipleAIEditsFromChat = (suggestions: Array<{
+    originalText: string;
+    suggestedText: string;
+    explanation: string;
+  }>) => {
+    setMultipleSuggestions(suggestions);
   };
 
   return (
@@ -240,7 +389,15 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
           {/* AI Chat */}
           <div className="flex-1 p-4 min-h-0">
             <AIChat
-              onSuggestEdit={handleAIEdit}
+              onSuggestEdit={(suggestion) => {
+                // Accepts { originalText, suggestedText, explanation }
+                setAiSuggestion({
+                  original: suggestion.originalText,
+                  suggested: suggestion.suggestedText,
+                  position: { top: 180, left: 120 },
+                  explanation: suggestion.explanation
+                });
+              }}
               essayContent={currentEssay.content}
               essayId={currentEssay.id}
             />
@@ -274,6 +431,7 @@ export default function EssayEditor({ essay, onBack, onSave }: EssayEditorProps)
       <AIEditSuggestion
         originalText={aiSuggestion?.original || ''}
         suggestedText={aiSuggestion?.suggested || ''}
+        explanation={aiSuggestion?.explanation || ''}
         onKeep={handleKeepSuggestion}
         onUndo={handleUndoSuggestion}
         position={aiSuggestion?.position || { top: 0, left: 0 }}

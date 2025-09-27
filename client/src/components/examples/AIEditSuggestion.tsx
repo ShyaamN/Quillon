@@ -13,6 +13,7 @@ export default function AIEditSuggestionExample() {
       <AIEditSuggestion
         originalText="I learned a lot from this experience and it made me grow as a person."
         suggestedText="This experience taught me resilience and fundamentally shaped my perspective on leadership."
+        explanation="This revision uses specific, concrete language instead of vague phrases like 'learned a lot' and 'grow as a person.'"
         onKeep={() => {
           console.log('Keeping AI suggestion');
           setIsVisible(false);

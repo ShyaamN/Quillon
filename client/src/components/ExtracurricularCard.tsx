@@ -2,15 +2,7 @@ import { Edit2, Trash2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
-interface ExtracurricularActivity {
-  id: string;
-  activityName: string;
-  description: string;
-  role: string;
-  duration: string;
-  impact: string;
-}
+import type { ExtracurricularActivity } from '@/hooks/useActivities';
 
 interface ExtracurricularCardProps {
   activity: ExtracurricularActivity;

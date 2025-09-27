@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 interface AIEditSuggestionProps {
   originalText: string;
   suggestedText: string;
+  explanation: string;
   onKeep: () => void;
   onUndo: () => void;
   position: { top: number; left: number };
@@ -14,6 +15,7 @@ interface AIEditSuggestionProps {
 export default function AIEditSuggestion({ 
   originalText, 
   suggestedText, 
+  explanation,
   onKeep, 
   onUndo,
   position,
@@ -52,6 +54,15 @@ export default function AIEditSuggestion({
               {suggestedText}
             </div>
           </div>
+
+          {explanation && (
+            <div>
+              <div className="text-muted-foreground mb-1">Why this improves:</div>
+              <div className="bg-blue-500/10 p-2 rounded border text-blue-700 dark:text-blue-400 text-xs">
+                {explanation}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

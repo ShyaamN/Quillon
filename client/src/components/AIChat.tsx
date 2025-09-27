@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, Loader2, AlertTriangle } from 'lucide-react';
+import { Send, User, Bot, Loader2, Edit3, AlertTriangle, Sparkles, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 
 interface Message {
@@ -11,19 +12,45 @@ interface Message {
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
+  hasEditSuggestion?: boolean;
+  editSuggestion?: {
+    originalText: string;
+    suggestedText: string;
+    explanation: string;
+  };
 }
 
 interface AIChatProps {
-  onSuggestEdit?: (suggestion: string) => void;
+  onSuggestEdit?: (suggestion: { originalText: string; suggestedText: string; explanation: string }) => void;
+  onSuggestMultipleEdits?: (suggestions: Array<{ originalText: string; suggestedText: string; explanation: string }>) => void;
   essayContent?: string;
   essayId?: string;
+  onGenerateFeedbackEdits?: () => Promise<void>;
+  isGeneratingFeedbackEdits?: boolean;
+  feedbackSuggestions?: Array<{
+    originalText: string;
+    suggestedText: string;
+    explanation: string;
+  }>;
+  onAcceptAllSuggestions?: () => void;
+  onRejectAllSuggestions?: () => void;
 }
 
-export default function AIChat({ onSuggestEdit, essayContent, essayId }: AIChatProps) {
+export default function AIChat({ 
+  onSuggestEdit, 
+  onSuggestMultipleEdits,
+  essayContent, 
+  essayId,
+  onGenerateFeedbackEdits,
+  isGeneratingFeedbackEdits: isLoadingFeedbackEdits = false,
+  feedbackSuggestions = [],
+  onAcceptAllSuggestions,
+  onRejectAllSuggestions
+}: AIChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hi! I'm Quillius, your AI writing partner. Ask me anything about your essay, brainstorming ideas, or how to improve specific sections.",
+      content: "Hi! I'm Quillius, your AI writing partner in Agent Mode. I automatically provide edit suggestions when I can help improve your essay. Ask me anything about your writing and I'll suggest specific improvements!",
       role: 'assistant',
       timestamp: new Date(Date.now() - 1000 * 60 * 5)
     }
@@ -31,8 +58,29 @@ export default function AIChat({ onSuggestEdit, essayContent, essayId }: AIChatP
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [multipleSuggestions, setMultipleSuggestions] = useState<Array<{
+    originalText: string;
+    suggestedText: string;
+    explanation: string;
+  }>>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Detect if user is asking for edits
+  const detectEditRequest = (message: string): boolean => {
+    const editKeywords = [
+      'fix', 'improve', 'rewrite', 'edit', 'change', 'revise', 'rephrase',
+      'make this better', 'help me with', 'suggestions for', 'how can I improve'
+    ];
+    const lowerMessage = message.toLowerCase();
+    return editKeywords.some(keyword => lowerMessage.includes(keyword));
+  };
+
+  const handleApplyEdit = async (editSuggestion: Message['editSuggestion']) => {
+    if (editSuggestion && onSuggestEdit) {
+      onSuggestEdit(editSuggestion);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -41,6 +89,30 @@ export default function AIChat({ onSuggestEdit, essayContent, essayId }: AIChatP
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Update local suggestions when feedback suggestions change
+  useEffect(() => {
+    if (feedbackSuggestions && feedbackSuggestions.length > 0) {
+      setMultipleSuggestions(feedbackSuggestions);
+      
+      // Add a message about the generated suggestions
+      const suggestionMessage: Message = {
+        id: `feedback-suggestions-${Date.now()}`,
+        content: `🎯 I've analyzed your essay and generated ${feedbackSuggestions.length} targeted improvements based on the feedback. You can apply each suggestion individually:`,
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, suggestionMessage]);
+    }
+  }, [feedbackSuggestions]);
+
+  const handleGenerateFeedbackEdits = async () => {
+    if (onGenerateFeedbackEdits) {
+      setMultipleSuggestions([]); // Clear previous suggestions
+      await onGenerateFeedbackEdits();
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -58,8 +130,10 @@ export default function AIChat({ onSuggestEdit, essayContent, essayId }: AIChatP
     setErrorMessage(null);
 
     try {
+      const isEditRequest = detectEditRequest(newMessage.content);
       const payload: Record<string, string> = {
         message: newMessage.content.trim(),
+        mode: 'agent'
       };
 
       if (essayId) {
@@ -68,15 +142,62 @@ export default function AIChat({ onSuggestEdit, essayContent, essayId }: AIChatP
         payload.essayContent = essayContent;
       }
 
-      const response = await apiRequest('POST', '/api/chat', payload);
-      const data = await response.json();
+      let assistantMessage: Message;
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: data.response || "I'm not sure how to help with that right now.",
-        role: 'assistant',
-        timestamp: new Date()
-      };
+      // Always try to provide edit suggestions in agent mode if essay content exists
+      if (essayContent) {
+        try {
+          const editResponse = await apiRequest('POST', '/api/ai/suggest-edit', {
+            content: essayContent,
+            request: newMessage.content
+          });
+          const editData = await editResponse.json();
+
+          assistantMessage = {
+            id: (Date.now() + 1).toString(),
+            content: `I found a section to improve. Here's my suggestion:\n\n**Original:** "${editData.originalText}"\n\n**Improved:** "${editData.suggestedText}"\n\n**Why:** ${editData.explanation}`,
+            role: 'assistant',
+            timestamp: new Date(),
+            hasEditSuggestion: true,
+            editSuggestion: {
+              originalText: editData.originalText,
+              suggestedText: editData.suggestedText,
+              explanation: editData.explanation
+            }
+          };
+
+          // Auto-suggest the edit
+          if (onSuggestEdit) {
+            onSuggestEdit({
+              originalText: editData.originalText,
+              suggestedText: editData.suggestedText,
+              explanation: editData.explanation
+            });
+          }
+        } catch (editError) {
+          // Fallback to regular chat if edit fails
+          const response = await apiRequest('POST', '/api/chat', payload);
+          const data = await response.json();
+
+          assistantMessage = {
+            id: (Date.now() + 1).toString(),
+            content: data.response || "I'm not sure how to help with that right now.",
+            role: 'assistant',
+            timestamp: new Date()
+          };
+        }
+      } else {
+        // Regular chat response when no essay content
+        const response = await apiRequest('POST', '/api/chat', payload);
+        const data = await response.json();
+
+        assistantMessage = {
+          id: (Date.now() + 1).toString(),
+          content: data.response || "I'm not sure how to help with that right now.",
+          role: 'assistant',
+          timestamp: new Date()
+        };
+      }
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
@@ -104,10 +225,38 @@ export default function AIChat({ onSuggestEdit, essayContent, essayId }: AIChatP
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-gradient-to-r from-primary to-accent flex-shrink-0"></div>
-          Quillius
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-primary to-accent flex-shrink-0"></div>
+            Quillius
+          </CardTitle>
+          <Badge variant="default" className="text-xs">
+            <Bot className="w-3 h-3 mr-1" />
+            Agent Mode
+          </Badge>
+        </div>
+        <div className="text-xs text-muted-foreground mt-1">
+          Automatic suggestions and proactive editing
+        </div>
+        
+        {/* AI Feedback Edits Button */}
+        {essayContent && essayContent.trim().length > 50 && (
+          <div className="mt-3">
+            <Button
+              onClick={handleGenerateFeedbackEdits}
+              disabled={isLoadingFeedbackEdits}
+              size="sm"
+              className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+            >
+              {isLoadingFeedbackEdits ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              Generate AI Improvements
+            </Button>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col gap-4 min-h-0">
@@ -136,6 +285,22 @@ export default function AIChat({ onSuggestEdit, essayContent, essayId }: AIChatP
                 >
                   {message.content}
                 </div>
+                
+                {/* Edit suggestion button */}
+                {message.hasEditSuggestion && message.editSuggestion && (
+                  <div className="mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleApplyEdit(message.editSuggestion)}
+                      className="text-xs"
+                    >
+                      <Edit3 className="w-3 h-3 mr-1" />
+                      Apply Edit to Essay
+                    </Button>
+                  </div>
+                )}
+                
                 <div className="text-xs text-muted-foreground mt-1">
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
@@ -158,6 +323,33 @@ export default function AIChat({ onSuggestEdit, essayContent, essayId }: AIChatP
           
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Accept All Edits Button - only show if there are multiple suggestions */}
+        {multipleSuggestions.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              {multipleSuggestions.length} AI improvements ready
+            </div>
+            <Button
+              size="sm"
+              onClick={() => onAcceptAllSuggestions?.()}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Check className="w-3 h-3 mr-1" />
+              Accept All Edits
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onRejectAllSuggestions?.()}
+              className="w-full"
+            >
+              <X className="w-3 h-3 mr-1" />
+              Reject All Edits
+            </Button>
+          </div>
+        )}
 
         {/* Input */}
         <div className="flex gap-2">

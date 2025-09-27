@@ -7,14 +7,17 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
+import { useActivities } from "@/hooks/useActivities";
 import { AuthModal } from "@/components/AuthModal";
 import { LandingPage } from "@/components/LandingPage";
 import Dashboard from "@/components/Dashboard";
 import EssayList from "@/components/EssayList";
 import EssayEditor from "@/components/EssayEditor";
 import ExtracurricularList from "@/components/ExtracurricularList";
+import ActivityEditor from "@/components/ActivityEditor";
 import NotFound from "@/pages/not-found";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ExtracurricularActivity } from "@/hooks/useActivities";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -54,10 +57,21 @@ function Router() {
 }
 
 function AuthenticatedApp({ user }: { user: any }) {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'essays' | 'essay-editor' | 'extracurriculars'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'essays' | 'essay-editor' | 'extracurriculars' | 'activity-editor'>('dashboard');
   const [selectedEssay, setSelectedEssay] = useState<any>(null);
+  const [selectedActivity, setSelectedActivity] = useState<ExtracurricularActivity | null>(null);
   const [essays, setEssays] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
+  
+  // Use the activities hook
+  const { 
+    activities, 
+    isLoading: activitiesLoading, 
+    error: activitiesError,
+    createActivity,
+    updateActivity,
+    deleteActivity,
+    refineActivity
+  } = useActivities();
 
   const handleNavigateToEssays = () => setCurrentView('essays');
   const handleNavigateToExtracurriculars = () => setCurrentView('extracurriculars');
@@ -82,10 +96,6 @@ function AuthenticatedApp({ user }: { user: any }) {
     }
     setCurrentView('essays');
   };
-  
-  const handleDeleteActivity = (id: string) => {
-    setActivities(prev => prev.filter(a => a.id !== id));
-  };
 
   const handleNewEssayFromDashboard = () => {
     setSelectedEssay(null);
@@ -93,9 +103,60 @@ function AuthenticatedApp({ user }: { user: any }) {
   };
 
   const handleNewActivityFromDashboard = () => {
-    setCurrentView('extracurriculars');
-    // In the future, this could open a modal or navigate to an activity editor
-    console.log('New activity creation triggered from dashboard');
+    setSelectedActivity(null);
+    setCurrentView('activity-editor');
+  };
+
+  const handleAddNewActivity = () => {
+    setSelectedActivity(null);
+    setCurrentView('activity-editor');
+  };
+
+  const handleEditActivity = (activity: ExtracurricularActivity) => {
+    setSelectedActivity(activity);
+    setCurrentView('activity-editor');
+  };
+
+  const handleSaveActivity = async (activityData: any) => {
+    try {
+      console.log('Saving activity:', activityData, 'Selected activity:', selectedActivity);
+      
+      if (selectedActivity) {
+        // Update existing activity
+        await updateActivity(selectedActivity.id, activityData);
+        console.log('Activity updated successfully');
+      } else {
+        // Create new activity
+        const newActivity = await createActivity(activityData);
+        console.log('Activity created successfully:', newActivity);
+      }
+      
+      // Clear the selected activity and navigate back
+      setSelectedActivity(null);
+      setCurrentView('extracurriculars');
+    } catch (error) {
+      console.error('Error saving activity:', error);
+      // You might want to show a toast notification here
+    }
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    try {
+      await deleteActivity(id);
+    } catch (error) {
+      console.error('Error deleting activity:', error);
+      // You might want to show a toast notification here
+    }
+  };
+
+  const handleAIRefineActivity = async (activity: ExtracurricularActivity) => {
+    try {
+      await refineActivity(activity);
+      // You might want to show a success toast here
+    } catch (error) {
+      console.error('Error refining activity:', error);
+      // You might want to show an error toast here
+    }
   };
 
   const handleDeleteEssay = (id: string) => {
@@ -155,14 +216,42 @@ function AuthenticatedApp({ user }: { user: any }) {
                 Dashboard
               </Button>
             </div>
-            <ExtracurricularList
-              activities={activities}
-              onAddNew={() => console.log('Add new activity')}
-              onEdit={(activity) => console.log('Edit activity:', activity.activityName)}
-              onDelete={handleDeleteActivity}
-              onAIRefine={(activity) => console.log('AI refine:', activity.activityName)}
-            />
+            {activitiesLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading activities...</p>
+                </div>
+              </div>
+            ) : activitiesError ? (
+              <div className="flex items-center justify-center h-64">
+                <Card className="w-96">
+                  <CardHeader>
+                    <CardTitle className="text-destructive">Error Loading Activities</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">{activitiesError}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <ExtracurricularList
+                activities={activities}
+                onAddNew={handleAddNewActivity}
+                onEdit={handleEditActivity}
+                onDelete={handleDeleteActivity}
+                onAIRefine={handleAIRefineActivity}
+              />
+            )}
           </div>
+        )}
+        
+        {currentView === 'activity-editor' && (
+          <ActivityEditor
+            activity={selectedActivity || undefined}
+            onBack={() => setCurrentView('extracurriculars')}
+            onSave={handleSaveActivity}
+          />
         )}
       </Route>
       <Route component={NotFound} />

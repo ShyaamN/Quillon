@@ -2,7 +2,13 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertEssaySchema, insertExtracurricularSchema } from "@shared/schema";
-import { analyzeEssayFeedback, generateChatResponse, suggestEssayEdit, refineExtracurricularActivity } from "./gemini";
+import { 
+  analyzeEssayFeedback, 
+  generateChatResponse, 
+  refineExtracurricularActivity, 
+  suggestEssayEdit,
+  generateMultipleEditSuggestions
+} from './gemini';
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupLocalAuth, requireAuth } from "./localAuth";
 import { z } from "zod";
@@ -313,12 +319,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userId = getUserId(req);
       const chatSchema = z.object({
-        message: z.string().min(1).max(1000),
+        message: z.string().min(1).max(5000), // Increased limit for feedback-based requests
         essayId: z.string().optional(),
-        essayContent: z.string().optional()
+        essayContent: z.string().optional(),
+        mode: z.string().optional()
       });
       
-      const { message, essayId, essayContent } = chatSchema.parse(req.body);
+      console.log('Chat request body:', JSON.stringify(req.body, null, 2));
+      const parseResult = chatSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        console.error('Chat validation error:', parseResult.error);
+        return res.status(400).json({ 
+          error: 'Invalid chat data', 
+          details: parseResult.error.issues 
+        });
+      }
+      const { message, essayId, essayContent, mode } = parseResult.data;
       
       let essayContext = '';
       if (essayId) {
@@ -331,8 +347,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         essayContext = essayContent.replace(/<[^>]*>/g, '').trim();
       }
       
-      const response = await generateChatResponse(message, essayContext);
-      res.json({ response });
+      // Check if this is a feedback-based edit request
+      if (message.includes('Based on this essay feedback') && message.includes('Generate multiple targeted edit suggestions')) {
+        // This is a special request for multiple suggestions based on feedback
+        const multipleSuggestions = await generateMultipleEditSuggestions(message, essayContext);
+        res.json({ suggestions: multipleSuggestions });
+      } else {
+        const response = await generateChatResponse(message, essayContext);
+        res.json({ response });
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: 'Invalid chat data', details: error.errors });
